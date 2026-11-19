@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.database import get_db
 from app.schemas import Consultation, ConsultationCreate
@@ -65,3 +65,31 @@ def create_consultation(
     ).fetchone()
     return to_consultation(db, row)
 
+
+@router.get("", response_model=list[Consultation])
+def list_consultations(
+    patient: str | None = Query(None, max_length=100, description="Part of the patient name"),
+    diagnosis_code: str | None = Query(None, max_length=20, description="Exact ICD-10 code"),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    db: sqlite3.Connection = Depends(get_db),
+):
+    sql = "SELECT id, patient_name, notes, created_at FROM consultation WHERE 1 = 1"
+    params: list = []
+
+    if patient and patient.strip():
+        sql += " AND patient_name LIKE ?"
+        params.append(f"%{patient.strip()}%")
+
+    if diagnosis_code and diagnosis_code.strip():
+        sql += """ AND id IN (
+            SELECT consultation_id FROM consultation_diagnosis WHERE diagnosis_code = ?
+        )"""
+        params.append(diagnosis_code.strip().upper())
+
+    sql += " ORDER BY created_at DESC, id DESC"
+    sql += " LIMIT ? OFFSET ?"
+    params += [limit, offset]
+
+    rows = db.execute(sql, params).fetchall()
+    return [to_consultation(db, row) for row in rows]
