@@ -19,6 +19,7 @@ body {
 .nav { display: flex; gap: 20px; flex: 1; }
 .nav a { opacity: 0.85; }
 .nav a.router-link-exact-active { opacity: 1; text-decoration: underline; }
+.user { color: #fff; font-size: 14px; }
 
 .container { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
 

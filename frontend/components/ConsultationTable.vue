@@ -18,6 +18,7 @@ function formatDate(value: string) {
       <tr>
         <th>Date</th>
         <th>Patient</th>
+        <th>Doctor</th>
         <th>Diagnoses</th>
         <th>Notes</th>
       </tr>
@@ -26,6 +27,7 @@ function formatDate(value: string) {
       <tr v-for="consultation in consultations" :key="consultation.id">
         <td class="nowrap">{{ formatDate(consultation.created_at) }}</td>
         <td class="nowrap">{{ consultation.patient_name }}</td>
+        <td class="nowrap">{{ consultation.doctor_name }}</td>
         <td>
           <span
             v-for="diagnosis in consultation.diagnoses"
