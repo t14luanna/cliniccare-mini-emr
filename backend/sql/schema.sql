@@ -4,12 +4,21 @@ CREATE TABLE IF NOT EXISTS diagnosis (
     description TEXT NOT NULL
 );
 
+-- password_hash is bcrypt
+CREATE TABLE IF NOT EXISTS doctor (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT NOT NULL UNIQUE,
+    full_name     TEXT NOT NULL,
+    password_hash TEXT NOT NULL
+);
+
 -- one row per visit
 CREATE TABLE IF NOT EXISTS consultation (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     patient_name TEXT NOT NULL,
     notes        TEXT NOT NULL,
-    created_at   TEXT NOT NULL
+    created_at   TEXT NOT NULL,
+    doctor_id    INTEGER NOT NULL REFERENCES doctor(id)
 );
 
 -- many-to-many between consultation and diagnosis

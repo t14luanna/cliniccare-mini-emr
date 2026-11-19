@@ -14,6 +14,7 @@ def test_create_consultation(client):
     assert response.status_code == 201
     data = response.json()
     assert data["patient_name"] == "Nguyen Van A"
+    assert data["doctor_name"] == "Dr. Demo"
     assert [d["code"] for d in data["diagnoses"]] == ["A90", "R50.9"]
 
 

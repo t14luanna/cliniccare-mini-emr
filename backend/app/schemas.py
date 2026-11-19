@@ -33,4 +33,21 @@ class Consultation(BaseModel):
     patient_name: str
     notes: str
     created_at: datetime
+    doctor_name: str
     diagnoses: list[Diagnosis]
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=50)
+    password: str = Field(min_length=1, max_length=100)
+
+
+class Doctor(BaseModel):
+    username: str
+    full_name: str
+
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    doctor: Doctor

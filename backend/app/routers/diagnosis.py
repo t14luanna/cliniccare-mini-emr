@@ -2,10 +2,15 @@ import sqlite3
 
 from fastapi import APIRouter, Depends, Query
 
+from app.auth import get_current_doctor
 from app.database import get_db
 from app.schemas import Diagnosis
 
-router = APIRouter(prefix="/diagnosis", tags=["diagnosis"])
+router = APIRouter(
+    prefix="/diagnosis",
+    tags=["diagnosis"],
+    dependencies=[Depends(get_current_doctor)],
+)
 
 
 @router.get("", response_model=list[Diagnosis])

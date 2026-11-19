@@ -3,10 +3,21 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from app.auth import get_current_doctor
 from app.database import get_db
 from app.schemas import Consultation, ConsultationCreate
 
-router = APIRouter(prefix="/consultation", tags=["consultation"])
+router = APIRouter(
+    prefix="/consultation",
+    tags=["consultation"],
+    dependencies=[Depends(get_current_doctor)],
+)
+
+SELECT_CONSULTATION = """
+    SELECT c.id, c.patient_name, c.notes, c.created_at, d.full_name AS doctor_name
+    FROM consultation c
+    JOIN doctor d ON d.id = c.doctor_id
+"""
 
 
 def get_diagnoses(db: sqlite3.Connection, consultation_id: int) -> list[dict]:
@@ -33,6 +44,7 @@ def to_consultation(db: sqlite3.Connection, row: sqlite3.Row) -> dict:
 def create_consultation(
     payload: ConsultationCreate,
     db: sqlite3.Connection = Depends(get_db),
+    doctor: dict = Depends(get_current_doctor),
 ):
     placeholders = ",".join("?" for _ in payload.diagnosis_codes)
     found = db.execute(
@@ -50,8 +62,11 @@ def create_consultation(
     created_at = datetime.now(timezone.utc).isoformat()
     with db:
         cursor = db.execute(
-            "INSERT INTO consultation (patient_name, notes, created_at) VALUES (?, ?, ?)",
-            (payload.patient_name, payload.notes, created_at),
+            """
+            INSERT INTO consultation (patient_name, notes, created_at, doctor_id)
+            VALUES (?, ?, ?, ?)
+            """,
+            (payload.patient_name, payload.notes, created_at, doctor["id"]),
         )
         consultation_id = cursor.lastrowid
         db.executemany(
@@ -60,7 +75,7 @@ def create_consultation(
         )
 
     row = db.execute(
-        "SELECT id, patient_name, notes, created_at FROM consultation WHERE id = ?",
+        f"{SELECT_CONSULTATION} WHERE c.id = ?",
         (consultation_id,),
     ).fetchone()
     return to_consultation(db, row)
@@ -74,20 +89,20 @@ def list_consultations(
     offset: int = Query(0, ge=0),
     db: sqlite3.Connection = Depends(get_db),
 ):
-    sql = "SELECT id, patient_name, notes, created_at FROM consultation WHERE 1 = 1"
+    sql = f"{SELECT_CONSULTATION} WHERE 1 = 1"
     params: list = []
 
     if patient and patient.strip():
-        sql += " AND patient_name LIKE ?"
+        sql += " AND c.patient_name LIKE ?"
         params.append(f"%{patient.strip()}%")
 
     if diagnosis_code and diagnosis_code.strip():
-        sql += """ AND id IN (
+        sql += """ AND c.id IN (
             SELECT consultation_id FROM consultation_diagnosis WHERE diagnosis_code = ?
         )"""
         params.append(diagnosis_code.strip().upper())
 
-    sql += " ORDER BY created_at DESC, id DESC"
+    sql += " ORDER BY c.created_at DESC, c.id DESC"
     sql += " LIMIT ? OFFSET ?"
     params += [limit, offset]
 

@@ -32,6 +32,20 @@ def init_db() -> None:
     try:
         conn.executescript((SQL_DIR / "schema.sql").read_text())
         conn.executescript((SQL_DIR / "seed_diagnosis.sql").read_text())
+        create_demo_doctor(conn)
         conn.commit()
     finally:
         conn.close()
+
+
+def create_demo_doctor(conn: sqlite3.Connection) -> None:
+    from app.auth import hash_password  # circular import otherwise
+
+    username = os.getenv("DEMO_DOCTOR_USERNAME", "doctor")
+    password = os.getenv("DEMO_DOCTOR_PASSWORD", "doctor123")
+    exists = conn.execute("SELECT 1 FROM doctor WHERE username = ?", (username,)).fetchone()
+    if not exists:
+        conn.execute(
+            "INSERT INTO doctor (username, full_name, password_hash) VALUES (?, ?, ?)",
+            (username, "Dr. Demo", hash_password(password)),
+        )
